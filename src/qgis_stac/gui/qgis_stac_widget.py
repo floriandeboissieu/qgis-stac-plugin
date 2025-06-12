@@ -54,7 +54,7 @@ from ..utils import (
     tr,
 )
 
-from .result_item_widget import add_footprint_helper, ResultItemWidget
+from .result_item_widget import add_footprint_helper, add_footprints_helper, ResultItemWidget
 
 WidgetUi, _ = loadUiType(
     os.path.join(os.path.dirname(__file__), "../ui/qgis_stac_main.ui")
@@ -872,34 +872,32 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
 
     def footprint_btn_clicked(self):
         """ Adds selected footprints as map layers."""
-        for key, item in self.footprint_items.items():
-            try:
-                footprint_task = QgsTask.fromFunction(
-                    'Add footprints',
-                    add_footprint_helper(item, self)
-                )
-                QgsApplication.taskManager().addTask(footprint_task)
-            except Exception as err:
-                log(
-                    tr("Error loading item footprint {}, {}".
-                       format(item.id, err))
-                )
+        items = self.footprint_items.values()
+        try:
+            footprint_task = QgsTask.fromFunction(
+                'Add footprints',
+                add_footprints_helper(items, self)
+            )
+            QgsApplication.taskManager().addTask(footprint_task)
+        except Exception as err:
+            log(
+                tr("Error loading item footprints {}".
+                    format(err))
+            )
 
     def all_footprints_btn_clicked(self):
         """ Adds all footprints for the current page items as map layers."""
-        for item in self.result_items:
-            try:
-                footprint_task = QgsTask.fromFunction(
-                    'Add footprint',
-                    add_footprint_helper(item, self)
-                )
-                QgsApplication.taskManager().addTask(footprint_task)
-            except Exception as err:
-                log(
-                    tr("Error loading item footprint {}, {}".
-                       format(item.id, err))
-                )
-
+        try:
+            footprint_task = QgsTask.fromFunction(
+                'Add footprint',
+                add_footprints_helper(self.result_items, self)
+            )
+            QgsApplication.taskManager().addTask(footprint_task)
+        except Exception as err:
+            log(
+                tr("Error loading item footprints {}".format(err))
+            )
+            
     def clear_search_results(self):
         """ Clear current search results from the UI"""
         self.scroll_area.setWidget(QtWidgets.QWidget())
