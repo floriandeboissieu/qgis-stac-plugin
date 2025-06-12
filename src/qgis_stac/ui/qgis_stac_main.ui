@@ -909,6 +909,16 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="items_assets_btn">
+            <property name="toolTip">
+             <string>Add assets of all items</string>
+            </property>
+            <property name="text">
+             <string>Add all assets</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="horizontalSpacer_11">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>

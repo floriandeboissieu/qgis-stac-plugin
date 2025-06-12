@@ -5,6 +5,7 @@
 """
 
 import os
+from copy import deepcopy
 
 from functools import partial
 
@@ -41,7 +42,8 @@ from ..api.models import (
     SearchFilters,
     SortField,
     SortOrder,
-    QueryableFetchType
+    QueryableFetchType,
+    ResourceAsset
 )
 from ..api.client import Client
 
@@ -55,6 +57,7 @@ from ..utils import (
 )
 
 from .result_item_widget import add_footprint_helper, add_footprints_helper, ResultItemWidget
+from .assets_dialog import ItemsAssetsDialog
 
 WidgetUi, _ = loadUiType(
     os.path.join(os.path.dirname(__file__), "../ui/qgis_stac_main.ui")
@@ -217,6 +220,10 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
 
         self.queryable_property_widgets = []
         self.queryable_properties = []
+
+        self.items_assets_btn.setEnabled(self.result_items is not None)
+        self.items_assets_btn.clicked.connect(self.open_assets_dialog)
+
 
     def prepare_plugin_settings(self):
         """ Initializes all the plugin related settings"""
@@ -897,7 +904,42 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
             log(
                 tr("Error loading item footprints {}".format(err))
             )
-            
+    
+    def open_assets_dialog(self):
+        """  Opens the assets dialog for the STAC item.
+            Queries the plugin Item from the plugin settings to get the
+            most recent updated assets.
+        """
+        # connection = settings_manager.get_current_connection()
+        # saved_item = settings_manager.get_items(
+        #     connection.id,
+        #     [str(self.item.item_uuid)]
+        # )
+        # if saved_item:
+        item = deepcopy(self.result_items[0])
+        if item.collection is not None:
+            item.id = item.collection
+        stored_assets = [
+            ResourceAsset(
+                href=asset.href,
+                title=key,
+                description=asset.description,
+                type=asset.media_type,
+                roles=asset.roles or []
+            )
+            for key, asset in item.stac_object.assets.items()
+        ]
+        item.assets = stored_assets
+
+        assets_dialog = ItemsAssetsDialog(
+            item,
+            parent=self,
+            main_widget=self,
+            items=self.result_items,
+        )
+        assets_dialog.exec_()
+
+
     def clear_search_results(self):
         """ Clear current search results from the UI"""
         self.scroll_area.setWidget(QtWidgets.QWidget())

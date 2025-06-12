@@ -37,7 +37,8 @@ from ..resources import *
 
 from ..api.models import (
     AssetLayerType,
-    ApiCapability
+    ApiCapability,
+    ResourceAsset
 )
 
 from ..definitions.constants import (
@@ -640,7 +641,78 @@ class AssetsDialog(QtWidgets.QDialog, DialogUi):
             message
         )
 
+class ItemsAssetsDialog(AssetsDialog):
+    def __init__(
+            self,
+            item,
+            parent,
+            main_widget,
+            items,
+    ):
+        super().__init__(item, parent, main_widget)
+        self.items = items
+    
+    def prepare_assets(self):
+        """ Loads the dialog with the list of assets.
+        """
+        super().prepare_assets()
+        if len(self.assets) > 0:
+            self.title.setText(
+                tr("Collection {}").
+                format(self.item.id)
+            )
+            self.asset_count.setText(
+                tr("{} available asset(s)").
+                format(len(self.assets))
 
+            )
+        else:
+            self.title.setText(
+                tr("Collection {} has no assets").
+                format(self.item.id)
+            )
+
+
+    def load_btn_clicked(self):
+        """ Runs logic after the asset load button has been clicked.
+        """
+        for key, asset in self.load_assets.items():
+            for item in self.items:
+                if key in item.stac_object.assets:
+                    asset = item.stac_object.assets[key]
+                    rasset = ResourceAsset(
+                        href=asset.href,
+                        title=asset.title or key,
+                        description=asset.description,
+                        type=asset.media_type or asset.type,
+                        roles=asset.roles or []
+                    )
+
+                    try:
+                        load_task = QgsTask.fromFunction(
+                            'Load asset function',
+                            self.load_asset(rasset)
+                        )
+                        QgsApplication.taskManager().addTask(load_task)
+                    except Exception as err:
+                        log(tr("An error occurred when running task for "
+                            "loading an asset, error message \"{}\" ".format(err))
+                            )
+    
+    def update_inputs(self, enabled):
+        """ Updates the inputs widgets state in the main search item widget.
+
+        :param enabled: Whether to enable the inputs or disable them.
+        :type enabled: bool
+        """
+        self.scroll_area.setEnabled(enabled)
+        # self.parent.update_inputs(enabled)
+        self.load_btn.setEnabled(
+            enabled and len(self.load_assets.items()) > 0
+        )
+        self.download_btn.setEnabled(
+            enabled and len(self.download_assets.items()) > 0
+        )
 class LayerLoader(QgsTask):
     """ Prepares and loads items assets inside QGIS as layers."""
 
