@@ -943,6 +943,11 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
         # )
         # if saved_item:
         items = self.result_items
+        if len(set([item.collection for item in items])) > 1:
+            raise NotImplementedError(
+                "Adding assets from multiple collections is not supported.\n"
+                "Please select a single collection.")
+
         item = deepcopy(items[0])
         if item.collection is not None:
             item.id = item.collection
@@ -971,6 +976,11 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
             based on the first item assets.
         """
         items = list(self.footprint_items.values())
+        if len(set([item.collection for item in items])) > 1:
+            raise NotImplementedError(
+                "Adding assets from multiple collections is not supported.\n"
+                "Please select a single collection.")
+        
         item = deepcopy(items[0])
         if item.collection is not None:
             item.id = item.collection
