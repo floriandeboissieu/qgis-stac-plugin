@@ -96,6 +96,13 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
         self.footprint_btn.clicked.connect(
             self.footprint_btn_clicked
         )
+        self.items_btn.clicked.connect(
+            self.open_selected_items_dialog
+        )
+        self.items_btn.setEnabled(
+            len(self.footprint_items.items()) > 0
+        )
+
         self.all_footprints_btn.clicked.connect(
             self.all_footprints_btn_clicked
         )
@@ -222,7 +229,7 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
         self.queryable_properties = []
 
         self.items_assets_btn.setEnabled(self.result_items is not None)
-        self.items_assets_btn.clicked.connect(self.open_assets_dialog)
+        self.items_assets_btn.clicked.connect(self.open_all_items_dialog)
 
 
     def prepare_plugin_settings(self):
@@ -773,6 +780,9 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
                 self.footprint_btn.setEnabled(
                     False
                 )
+                self.items_btn.setEnabled(
+                    False
+                )
                 self.all_footprints_btn.setEnabled(
                     len(self.result_items) > 0
                 )
@@ -861,22 +871,38 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
         self.footprint_btn.setEnabled(
             len(self.footprint_items.items()) > 0
         )
-
+        self.items_btn.setText(
+            f"Add the selected item(s) ({len(self.footprint_items.items())})"
+        )
+        self.items_btn.setEnabled(
+            len(self.footprint_items.items()) > 0
+        )
     def footprint_deselected(self, item):
         """ Removes the passed item from the  list of the
         footprints to be added.
         """
         self.footprint_items.pop(item.id)
-        self.footprint_btn.setText(
-            f"Add the selected footprint(s) ({len(self.footprint_items.items())})"
-        ) if self.footprint_items else \
+        if self.footprint_items:
+            self.footprint_btn.setText(
+                f"Add the selected footprint(s) ({len(self.footprint_items.items())})"
+            )
+            self.items_btn.setText(
+                f"Add the selected item(s) ({len(self.footprint_items.items())})"
+            )
+        else:
             self.footprint_btn.setText(
                 "Add the selected footprint(s)"
             )
+            self.items_btn.setText(
+                f"Add the selected item(s)"
+            )
+        
         self.footprint_btn.setEnabled(
             len(self.footprint_items.items()) > 0
         )
-
+        self.items_btn.setEnabled(
+            len(self.footprint_items.items()) > 0
+        )
     def footprint_btn_clicked(self):
         """ Adds selected footprints as map layers."""
         items = self.footprint_items.values()
@@ -905,7 +931,7 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
                 tr("Error loading item footprints {}".format(err))
             )
     
-    def open_assets_dialog(self):
+    def open_all_items_dialog(self):
         """  Opens the assets dialog for the STAC item.
             Queries the plugin Item from the plugin settings to get the
             most recent updated assets.
@@ -916,7 +942,8 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
         #     [str(self.item.item_uuid)]
         # )
         # if saved_item:
-        item = deepcopy(self.result_items[0])
+        items = self.result_items
+        item = deepcopy(items[0])
         if item.collection is not None:
             item.id = item.collection
         stored_assets = [
@@ -935,10 +962,37 @@ class QgisStacWidget(QtWidgets.QMainWindow, WidgetUi):
             item,
             parent=self,
             main_widget=self,
-            items=self.result_items,
+            items=items,
         )
         assets_dialog.exec_()
 
+    def open_selected_items_dialog(self):
+        """  Opens the assets dialog for the selected STAC items,
+            based on the first item assets.
+        """
+        items = list(self.footprint_items.values())
+        item = deepcopy(items[0])
+        if item.collection is not None:
+            item.id = item.collection
+        stored_assets = [
+            ResourceAsset(
+                href=asset.href,
+                title=key,
+                description=asset.description,
+                type=asset.media_type,
+                roles=asset.roles or []
+            )
+            for key, asset in item.stac_object.assets.items()
+        ]
+        item.assets = stored_assets
+
+        assets_dialog = ItemsAssetsDialog(
+            item,
+            parent=self,
+            main_widget=self,
+            items=items,
+        )
+        assets_dialog.exec_()
 
     def clear_search_results(self):
         """ Clear current search results from the UI"""
