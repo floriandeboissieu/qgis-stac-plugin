@@ -8,6 +8,7 @@ import os.path
 
 from pathlib import Path
 from osgeo import ogr, gdal
+import requests
 
 from functools import partial
 
@@ -474,6 +475,12 @@ class AssetsDialog(QtWidgets.QDialog, DialogUi):
         ])
         current_asset_href = asset.href
         asset.href = self.sign_asset_href(asset.href)
+        
+        if asset.href.startswith("http"):
+            # find redirection url if any
+            # compensate for issue https://github.com/qgis/QGIS/issues/62048
+            r = requests.head(asset.href, allow_redirects=True)
+            asset.href = r.url
 
         if asset_type in raster_types:
             layer_type = QgsMapLayer.RasterLayer
